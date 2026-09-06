@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
+import { AppLoggerService } from './common/logger/app-logger.service.js';
 import { appConfig, type AppConfig } from './config/index.js';
 
 const bootstrap = async (): Promise<void> => {
@@ -9,15 +10,15 @@ const bootstrap = async (): Promise<void> => {
     bufferLogs: true,
     bodyParser: false,
   });
-  const { port, logLevels, env } = app.get<AppConfig>(appConfig.KEY);
+  const { port, env } = app.get<AppConfig>(appConfig.KEY);
 
-  app.useLogger(logLevels);
+  app.useLogger(app.get(AppLoggerService));
   app.flushLogs();
   app.disable('x-powered-by');
   app.enableShutdownHooks();
 
   await app.listen(port);
-  new Logger('Bootstrap').log(`SecureLLM Gateway listening on port ${port} (${env})`);
+  new Logger('Bootstrap').log('SecureLLM Gateway listening', { event: 'app.started', port, env });
 };
 
 await bootstrap();
