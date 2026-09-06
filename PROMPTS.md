@@ -102,6 +102,17 @@ What I did with the output: <!-- TODO -->
 Append as you go. Timestamp, tool, one line on what and why. This is the raw material
 for everything above; keep it even if it doesn't all make the final doc.
 
-| Time | Tool | What |
-| --- | --- | --- |
-| | | |
+| Time | Tool | What |  
+
+---
+
+**12:49 claude**  
+Lets start by init the NestJS server with env config support.
+
+make sure to use config service, and typed + validated env variables.
+use domain config factories
+create running package.json scripts for running local env and regular env
+
+pre create the files (like redis config, mongo config etc.)  
+
+---
