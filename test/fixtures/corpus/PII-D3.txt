@@ -1,0 +1,9 @@
+{
+"customer": {
+"name": "[REDACTED]",
+"id_number": "111111118",
+"email": "a.test@example.com",
+"phone": "+1-202-555-0143"
+},
+"request": "summarise account history"
+}
