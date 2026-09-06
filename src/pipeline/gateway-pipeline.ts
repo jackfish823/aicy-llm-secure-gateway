@@ -120,7 +120,12 @@ export class GatewayPipeline {
           durationMs: elapsedMs(startedAt),
         });
 
-        this.logger.warn(`blocked by ${name} (${phase}): ${reason} [${context.requestId}]`);
+        this.logger.warn('Stage blocked request', {
+          event: 'stage.blocked',
+          stage: name,
+          phase,
+          reason,
+        });
 
         return { ...verdict, reason };
       }
@@ -144,13 +149,17 @@ export class GatewayPipeline {
         durationMs: elapsedMs(startedAt),
       });
 
-      this.logger.error(
-        `stage ${name} (${phase}) threw ${error instanceof Error ? error.name : 'non-Error'} [${context.requestId}]`,
-      );
-
-      this.logger.debug(
-        error instanceof Error ? (error.stack ?? error.message) : 'non-Error value thrown',
-      );
+      this.logger.error('Stage threw', {
+        event: 'stage.error',
+        stage: name,
+        phase,
+        errorName: error instanceof Error ? error.name : 'non-Error',
+      });
+      this.logger.debug('Stage error detail', {
+        event: 'stage.error.detail',
+        stage: name,
+        stack: error instanceof Error ? (error.stack ?? error.message) : 'non-Error value thrown',
+      });
       throw new PipelineStageError(name, phase, error);
     }
   }

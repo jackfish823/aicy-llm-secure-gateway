@@ -13,6 +13,8 @@ export const appEnvShape = {
   NODE_ENV: z.enum(NODE_ENVS).default('development'),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('log'),
+  /** Human-readable log lines for local development; JSON otherwise. */
+  LOG_PRETTY: z.stringbool().default(false),
 };
 
 export const appEnvSchema = z.object(appEnvShape);
@@ -23,6 +25,7 @@ export interface AppConfig {
   port: number;
   logLevel: ConfiguredLogLevel;
   logLevels: LogLevel[];
+  logPretty: boolean;
   isProduction: boolean;
 }
 
@@ -32,6 +35,7 @@ export const toAppConfig = (env: AppEnv): AppConfig => {
     port: env.PORT,
     logLevel: env.LOG_LEVEL,
     logLevels: LOG_LEVELS.slice(0, LOG_LEVELS.indexOf(env.LOG_LEVEL) + 1),
+    logPretty: env.LOG_PRETTY,
     isProduction: env.NODE_ENV === 'production',
   };
 };

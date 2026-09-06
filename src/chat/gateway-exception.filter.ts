@@ -21,6 +21,22 @@ export class GatewayExceptionFilter extends BaseExceptionFilter {
 
   override catch(exception: unknown, host: ArgumentsHost): void {
     if (exception instanceof HttpException) {
+      // Validation, parse and block rejections. Status and error code only, never the
+      // message list (it names request paths) and never the body.
+      const status = exception.getStatus();
+      const body: unknown = exception.getResponse();
+      const code =
+        typeof body === 'object' &&
+        body !== null &&
+        'error' in body &&
+        typeof body.error === 'string'
+          ? body.error
+          : exception.name;
+      this.logger[status >= 500 ? 'error' : 'warn']('Request rejected', {
+        event: 'request.rejected',
+        status,
+        error: code,
+      });
       super.catch(exception, host);
       return;
     }
@@ -34,14 +50,20 @@ export class GatewayExceptionFilter extends BaseExceptionFilter {
     if (exception instanceof LlmProviderError) {
       const statusCode =
         exception.kind === 'timeout' ? HttpStatus.GATEWAY_TIMEOUT : HttpStatus.BAD_GATEWAY;
-      const status = exception.status === undefined ? '' : ` (${exception.status})`;
-      this.logger.error(`upstream ${exception.kind}${status} [${requestId}]`);
+      this.logger.error('Upstream provider failed', {
+        event: 'upstream.failed',
+        kind: exception.kind,
+        status: exception.status,
+        retryable: exception.retryable,
+      });
       // The provider's own error is only ever visible at debug (off by default).
-      this.logger.debug(
-        exception.cause instanceof Error
-          ? `${exception.cause.name}: ${exception.cause.message}`
-          : 'no provider cause attached',
-      );
+      this.logger.debug('Upstream provider cause', {
+        event: 'upstream.cause',
+        cause:
+          exception.cause instanceof Error
+            ? `${exception.cause.name}: ${exception.cause.message}`
+            : 'no provider cause attached',
+      });
       response
         .status(statusCode)
         .json({ statusCode, error: 'upstream_error', kind: exception.kind, requestId });
@@ -58,14 +80,17 @@ export class GatewayExceptionFilter extends BaseExceptionFilter {
 
     const statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
 
-    this.logger.error(
-      `unhandled ${exception instanceof Error ? exception.name : typeof exception} [${requestId}]`,
-    );
-    this.logger.debug(
-      exception instanceof Error
-        ? (exception.stack ?? exception.message)
-        : 'non-Error value thrown',
-    );
+    this.logger.error('Unhandled exception', {
+      event: 'request.unhandled',
+      errorName: exception instanceof Error ? exception.name : typeof exception,
+    });
+    this.logger.debug('Unhandled exception detail', {
+      event: 'request.unhandled.detail',
+      stack:
+        exception instanceof Error
+          ? (exception.stack ?? exception.message)
+          : 'non-Error value thrown',
+    });
 
     response.status(statusCode).json({ statusCode, error: 'internal_error', requestId });
   }

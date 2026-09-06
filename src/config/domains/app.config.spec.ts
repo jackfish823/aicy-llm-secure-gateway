@@ -8,6 +8,7 @@ describe('app config', () => {
       port: 3000,
       logLevel: 'log',
       logLevels: ['fatal', 'error', 'warn', 'log'],
+      logPretty: false,
       isProduction: false,
     });
   });
@@ -45,6 +46,12 @@ describe('app config', () => {
       'debug',
       'verbose',
     ]);
+  });
+
+  it('parses LOG_PRETTY as a boolean string', () => {
+    expect(appConfigFromEnv({ LOG_PRETTY: 'true' }).logPretty).toBe(true);
+    expect(appConfigFromEnv({ LOG_PRETTY: '0' }).logPretty).toBe(false);
+    expect(() => appConfigFromEnv({ LOG_PRETTY: 'maybe' })).toThrow(/LOG_PRETTY/);
   });
 
   it('rejects an unknown LOG_LEVEL', () => {

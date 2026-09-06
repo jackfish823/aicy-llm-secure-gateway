@@ -126,3 +126,9 @@ the llm will pass various security layers (such as prompt injection detection, o
 we will implement each protocol later but for now i want us to create the basic provider abstract support and easly addable layers afterward
 
 --- 
+
+now i want to add a generic logger using pino with proper structured logging like that attached, keep it simple yet good (by the way does each log get sent to the audit as well?)
+
+attached a doc from one of properly made project of mine for ref, ignore the grafana and senty
+
+--- 

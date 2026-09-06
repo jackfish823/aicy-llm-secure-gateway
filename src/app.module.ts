@@ -7,6 +7,7 @@ import {
 import { APP_PIPE } from '@nestjs/core';
 import { ChatModule } from './chat/chat.module.js';
 import { JsonBodyMiddleware } from './common/http/json-body.middleware.js';
+import { AppLoggerService } from './common/logger/app-logger.service.js';
 import { RequestContextMiddleware } from './common/context/request-context.middleware.js';
 import { RequestContextModule } from './common/context/request-context.module.js';
 import { AppConfigModule } from './config/config.module.js';
@@ -14,7 +15,7 @@ import { HealthModule } from './health/health.module.js';
 
 @Module({
   imports: [AppConfigModule.forRoot(), RequestContextModule, HealthModule, ChatModule],
-  providers: [{ provide: APP_PIPE, useClass: StandardSchemaValidationPipe }],
+  providers: [AppLoggerService, { provide: APP_PIPE, useClass: StandardSchemaValidationPipe }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

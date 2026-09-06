@@ -32,13 +32,14 @@ export class ChatService {
       usage: response.usage,
     });
 
-    const exec = context.exec;
-    const execSummary =
-      exec === undefined ? '' : ` provider=${exec.provider} latencyMs=${exec.latencyMs}`;
-
-    this.logger.log(
-      `completed [${requestId}]${execSummary} model=${body.model} in=${body.usage.inputTokens} out=${body.usage.outputTokens}`,
-    );
+    this.logger.log('Chat completed', {
+      event: 'chat.completed',
+      provider: context.exec?.provider,
+      latencyMs: context.exec?.latencyMs,
+      model: body.model,
+      inputTokens: body.usage.inputTokens,
+      outputTokens: body.usage.outputTokens,
+    });
 
     return body;
   }

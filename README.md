@@ -80,6 +80,7 @@ variable named and no values printed. Each domain owns a typed factory in
 | `NODE_ENV`             | no                            | `development` | `development` \| `test` \| `production`; selects dotenv files |
 | `PORT`                 | no                            | `3000`        | 1-65535                                                       |
 | `LOG_LEVEL`            | no                            | `log`         | `fatal` \| `error` \| `warn` \| `log` \| `debug` \| `verbose` |
+| `LOG_PRETTY`           | no                            | `false`       | Human-readable lines (`start:local` sets `true`); JSON otherwise |
 | `MONGO_URI`            | yes                           |               | `mongodb://` or `mongodb+srv://`, database name included      |
 | `REDIS_URL`            | yes                           |               | `redis://` or `rediss://`                                     |
 | `REDIS_KEY_PREFIX`     | no                            | `sllm:`       | Prefix for every key the gateway writes                       |
@@ -117,6 +118,25 @@ control: implement `InboundStage` or `OutboundStage` as an `@Injectable` class a
 Providers implement `LlmProviderAdapter` (convert → send → parse → convert → validate) with the
 pure conversions in a codec file (`src/providers/anthropic/anthropic.codec.ts`);
 `FakeLlmProvider` is for tests only and is excluded from the production build.
+
+## Logging
+
+Pino, JSON to stdout (pretty in `start:local`). Use Nest's `Logger` as usual; pass a human
+message plus a flat fields object with an `event` in `resource.action` form:
+
+```ts
+private readonly logger = new Logger(ChatService.name);
+this.logger.log('Chat completed', { event: 'chat.completed', model, latencyMs });
+```
+
+Each line becomes `{ level, time, app, context, msg, requestId, event, ...fields }`; `context`
+(the class name) and `requestId` are injected automatically. Levels: `log` for normal
+operations, `warn` for handled anomalies (a stage blocked a request), `error` for failures,
+`debug` for detail that may include provider error text (off at the default `LOG_LEVEL`).
+Never put message content, findings, or keys in a field; `apiKey`, `content`,
+`matchedSegment`, `messages`, `system` and `authorization` are redacted as a backstop.
+Logs are operational only: the audit trail is a separate per-request record and nothing is
+copied from one to the other.
 
 ## Known limitations
 
