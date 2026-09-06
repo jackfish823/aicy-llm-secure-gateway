@@ -1,0 +1,77 @@
+# ---- Secrets --------------------------------------------------------------
+# Hardcoded secrets anywhere in the repo or git history is a no-hire signal.
+# .env.example IS committed — it documents required vars with placeholder values.
+.env
+.env.*
+!.env.example
+!.env.test
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# ---- Dependencies ---------------------------------------------------------
+node_modules/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz
+
+# ---- Build output ---------------------------------------------------------
+dist/
+build/
+*.tsbuildinfo
+
+# ---- Tests / coverage -----------------------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+vitest.config.*.timestamp*
+
+# ---- Logs -----------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---- Local data volumes ---------------------------------------------------
+# docker-compose mounts for Mongo/Redis if you bind-mount instead of using
+# named volumes. Never commit database contents — the PII vault lives there.
+data/
+mongo-data/
+redis-data/
+dump.rdb
+*.rdb
+
+# ---- Editor / OS ----------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+*~
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ---- Claude Code ----------------------------------------------------------
+# .claude/settings.json and .claude/hooks/ ARE committed — they are part of the
+# untrusted-input hygiene evidence for this submission. Only personal overrides
+# and session state are ignored.
+.claude/settings.local.json
+.claude/state/
+.claude/todos/
+
+# ---- Do NOT ignore --------------------------------------------------------
+# test/fixtures/corpus/  is committed. The tests require it, it is the
+# graders' own synthetic data, and its presence is part of the submission.
+#
+# The source challenge PDF is NOT in this repo and must not be added.
+*.pdf
