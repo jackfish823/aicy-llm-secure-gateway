@@ -2,6 +2,9 @@ import { vi } from 'vitest';
 
 export type RawEnv = Record<string, string | undefined>;
 
+/** Matches the UUIDs the gateway generates for request ids. */
+export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 export function validEnv(overrides: RawEnv = {}): RawEnv {
   return {
     NODE_ENV: 'test',

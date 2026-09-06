@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { llmConfigFromEnv } from './llm.config.js';
+import { llmConfigFromEnv, MAX_OUTPUT_TOKENS } from './llm.config.js';
 
 const anthropic = {
   LLM_PROVIDER: 'anthropic',
@@ -21,6 +21,7 @@ describe('llm config', () => {
       apiKey: 'placeholder-anthropic-key',
       timeoutMs: 30_000,
       baseUrl: undefined,
+      maxOutputTokens: 1024,
     });
   });
 
@@ -75,5 +76,31 @@ describe('llm config', () => {
     expect(() => llmConfigFromEnv({ ...anthropic, ANTHROPIC_API_KEY: '' })).toThrow(
       /ANTHROPIC_API_KEY/,
     );
+  });
+
+  it('defaults LLM_MAX_OUTPUT_TOKENS to 1024 and coerces overrides', () => {
+    expect(llmConfigFromEnv(anthropic).maxOutputTokens).toBe(1024);
+    expect(llmConfigFromEnv({ ...anthropic, LLM_MAX_OUTPUT_TOKENS: '4096' }).maxOutputTokens).toBe(
+      4096,
+    );
+  });
+
+  it('rejects a non-positive LLM_MAX_OUTPUT_TOKENS', () => {
+    expect(() => llmConfigFromEnv({ ...anthropic, LLM_MAX_OUTPUT_TOKENS: '0' })).toThrow(
+      /LLM_MAX_OUTPUT_TOKENS/,
+    );
+  });
+
+  it('rejects LLM_MAX_OUTPUT_TOKENS above the contract cap or non-integer', () => {
+    expect(() =>
+      llmConfigFromEnv({ ...anthropic, LLM_MAX_OUTPUT_TOKENS: String(MAX_OUTPUT_TOKENS + 1) }),
+    ).toThrow(/LLM_MAX_OUTPUT_TOKENS/);
+    expect(() => llmConfigFromEnv({ ...anthropic, LLM_MAX_OUTPUT_TOKENS: '1024.5' })).toThrow(
+      /LLM_MAX_OUTPUT_TOKENS/,
+    );
+    expect(
+      llmConfigFromEnv({ ...anthropic, LLM_MAX_OUTPUT_TOKENS: String(MAX_OUTPUT_TOKENS) })
+        .maxOutputTokens,
+    ).toBe(MAX_OUTPUT_TOKENS);
   });
 });

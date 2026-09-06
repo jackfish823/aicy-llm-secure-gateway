@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { EnvValidationError, parseEnv } from '../parse-env.js';
 
 export const LLM_PROVIDERS = ['anthropic', 'openai'] as const;
-export type LlmProvider = (typeof LLM_PROVIDERS)[number];
+export type LlmProviderId = (typeof LLM_PROVIDERS)[number];
+
+/** Upper bound for output tokens per completion, shared by the env default and the request contract. */
+export const MAX_OUTPUT_TOKENS = 8192;
 
 type ProviderKeyVar = 'ANTHROPIC_API_KEY' | 'OPENAI_API_KEY';
 
@@ -15,18 +18,19 @@ export const llmEnvShape = {
   LLM_PROVIDER: z.enum(LLM_PROVIDERS),
   LLM_MODEL: z.string().min(1),
   LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  LLM_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(1).max(MAX_OUTPUT_TOKENS).default(1024),
   LLM_BASE_URL: optionalEnvUrl,
   ANTHROPIC_API_KEY: optionalEnvString,
   OPENAI_API_KEY: optionalEnvString,
 };
 
 interface LlmKeyEnv {
-  LLM_PROVIDER: LlmProvider;
+  LLM_PROVIDER: LlmProviderId;
   ANTHROPIC_API_KEY?: string | undefined;
   OPENAI_API_KEY?: string | undefined;
 }
 
-function providerKeyVar(provider: LlmProvider): ProviderKeyVar | undefined {
+function providerKeyVar(provider: LlmProviderId): ProviderKeyVar | undefined {
   switch (provider) {
     case 'anthropic':
       return 'ANTHROPIC_API_KEY';
@@ -63,13 +67,12 @@ export const llmEnvSchema = z.object(llmEnvShape).superRefine(requireSelectedPro
 export type LlmEnv = z.output<typeof llmEnvSchema>;
 
 export interface LlmConfig {
-  provider: LlmProvider;
+  provider: LlmProviderId;
   model: string;
-  /** Key of the selected provider only. Never log it. */
   apiKey: string;
   timeoutMs: number;
-  /** Optional override, e.g. an internal proxy in front of the provider. */
   baseUrl: string | undefined;
+  maxOutputTokens: number;
 }
 
 export function toLlmConfig(env: LlmEnv): LlmConfig {
@@ -86,6 +89,7 @@ export function toLlmConfig(env: LlmEnv): LlmConfig {
     apiKey,
     timeoutMs: env.LLM_TIMEOUT_MS,
     baseUrl: env.LLM_BASE_URL,
+    maxOutputTokens: env.LLM_MAX_OUTPUT_TOKENS,
   };
 }
 

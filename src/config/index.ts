@@ -5,7 +5,7 @@ export {
   llmConfig,
   LLM_PROVIDERS,
   type LlmConfig,
-  type LlmProvider,
+  type LlmProviderId,
 } from './domains/llm.config.js';
 export { mongoConfig, type MongoConfig } from './domains/mongo.config.js';
 export { piiConfig, type PiiConfig } from './domains/pii.config.js';
