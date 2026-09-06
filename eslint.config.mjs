@@ -47,6 +47,60 @@ export default defineConfig(
     },
   },
   {
+    files: ['src/common/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/providers/**', '**/pipeline/**', '**/chat/**'],
+              allowTypeImports: true,
+              message:
+                'src/common may only type-import from feature layers; a value import inverts the layering.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/providers/**/*.ts', 'src/pipeline/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/chat/**'],
+              allowTypeImports: true,
+              message:
+                'providers/pipeline may only type-import from chat; a value import inverts the layering.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/providers/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/chat/**', '**/pipeline/**'],
+              allowTypeImports: true,
+              message:
+                'providers may only type-import from chat and pipeline; a value import inverts the layering.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.mjs', '**/*.js'],
     languageOptions: {
       sourceType: 'module',
