@@ -15,12 +15,12 @@ export interface RedisConfig {
   keyPrefix: string;
 }
 
-export function toRedisConfig(env: RedisEnv): RedisConfig {
+export const toRedisConfig = (env: RedisEnv): RedisConfig => {
   return { url: env.REDIS_URL, keyPrefix: env.REDIS_KEY_PREFIX };
-}
+};
 
-export function redisConfigFromEnv(raw: Record<string, unknown>): RedisConfig {
+export const redisConfigFromEnv = (raw: Record<string, unknown>): RedisConfig => {
   return toRedisConfig(parseEnv(redisEnvSchema, raw));
-}
+};
 
 export const redisConfig = registerAs('redis', () => redisConfigFromEnv(process.env));

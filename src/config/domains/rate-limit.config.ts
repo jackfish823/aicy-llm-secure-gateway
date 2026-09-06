@@ -15,12 +15,12 @@ export interface RateLimitConfig {
   max: number;
 }
 
-export function toRateLimitConfig(env: RateLimitEnv): RateLimitConfig {
+export const toRateLimitConfig = (env: RateLimitEnv): RateLimitConfig => {
   return { windowMs: env.RATE_LIMIT_WINDOW_MS, max: env.RATE_LIMIT_MAX };
-}
+};
 
-export function rateLimitConfigFromEnv(raw: Record<string, unknown>): RateLimitConfig {
+export const rateLimitConfigFromEnv = (raw: Record<string, unknown>): RateLimitConfig => {
   return toRateLimitConfig(parseEnv(rateLimitEnvSchema, raw));
-}
+};
 
 export const rateLimitConfig = registerAs('rateLimit', () => rateLimitConfigFromEnv(process.env));

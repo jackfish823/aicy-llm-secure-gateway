@@ -20,6 +20,37 @@ pnpm start:local
 curl http://localhost:3000/healthz
 ```
 
+## API
+
+`POST /v1/chat` — one completion through the security pipeline. No auth yet (see Known limitations).
+
+```bash
+curl -s http://localhost:3000/v1/chat \
+  -H 'content-type: application/json' \
+  -d '{"messages":[{"role":"user","content":"Say hello"}],"maxTokens":64}'
+```
+
+Request: `{ messages: [{ role: 'user' | 'assistant', content }], system?, maxTokens? }`
+(strict: unknown keys are rejected; the first message must be from `user`; the model is fixed by
+`LLM_MODEL`; there is no `temperature`, current Claude models reject it).
+Response: `{ requestId, content, model, stopReason, usage: { inputTokens, outputTokens } }`.
+Every response carries an `x-request-id` header, including body-parse failures: JSON bodies are
+capped at 10 MB (`JSON_BODY_LIMIT`) and larger ones are rejected with 413.
+
+| Situation                | Status | Body `error`                                      |
+| ------------------------ | ------ | ------------------------------------------------- |
+| Body is not valid JSON   | 400    | `invalid_body`                                    |
+| Body over 10 MB          | 413    | `body_too_large`                                  |
+| Body fails the schema    | 400    | Nest validation message list                      |
+| An inbound stage blocks  | 400    | `request_blocked` (+ `phase`, `stage`, `reason`)  |
+| An outbound stage blocks | 502    | `request_blocked`                                 |
+| Provider timeout         | 504    | `upstream_error` (`kind: timeout`)                |
+| Other provider failure   | 502    | `upstream_error` (+ `kind`)                       |
+| A stage threw            | 500    | `pipeline_failure` (+ `stage`)                    |
+| Anything else            | 500    | `internal_error`                                  |
+
+Every error body carries `requestId`; none carries message content, findings, or provider text.
+
 ## Scripts
 
 | Script                         | What it does                                                                          |
@@ -55,6 +86,7 @@ variable named and no values printed. Each domain owns a typed factory in
 | `LLM_PROVIDER`         | yes                           |               | `anthropic` \| `openai`                                       |
 | `LLM_MODEL`            | yes                           |               | Model id sent to the provider                                 |
 | `LLM_TIMEOUT_MS`       | no                            | `30000`       | Positive integer                                              |
+| `LLM_MAX_OUTPUT_TOKENS`| no                            | `1024`        | Default `max_tokens`, 1-8192; request `maxTokens` wins        |
 | `LLM_BASE_URL`         | no                            |               | Optional proxy URL; empty means unset                         |
 | `ANTHROPIC_API_KEY`    | when `LLM_PROVIDER=anthropic` |               |                                                               |
 | `OPENAI_API_KEY`       | when `LLM_PROVIDER=openai`    |               |                                                               |
@@ -74,9 +106,26 @@ Vitest. Security modules are unit-tested by calling the service directly. The
 adversarial corpus under `test/fixtures/corpus/` is loaded by ID at runtime and never
 inlined in test code; see `CLAUDE.md` for the rules around it.
 
+## Pipeline
+
+`src/pipeline/` runs ordered inbound stages, then the provider call (`LlmExecutor`, which owns
+the timeout), then ordered outbound stages. A stage returns `pass | transform(value) |
+block(reason, findings)`; every verdict is timed and appended to the request context
+(`RequestContext.stages`), and a throwing stage fails closed with a 500. To add a security
+control: implement `InboundStage` or `OutboundStage` as an `@Injectable` class and append it to
+`INBOUND_STAGE_ORDER` / `OUTBOUND_STAGE_ORDER` in `src/pipeline/pipeline.module.ts`.
+Providers implement `LlmProviderAdapter` (convert → send → parse → convert → validate) with the
+pure conversions in a codec file (`src/providers/anthropic/anthropic.codec.ts`);
+`FakeLlmProvider` is for tests only and is excluded from the production build.
+
 ## Known limitations
 
 - Out of scope for now: semantic/model-based injection classification, multi-tenant key
   rotation, streaming responses, token-level cost accounting.
 - The gateway container is not part of `docker-compose.yml` yet; run it on the host.
 - `GET /healthz` is liveness only. It does not check Mongo or Redis.
+- `POST /v1/chat` has no authentication or rate limiting yet. Do not expose it beyond localhost.
+- No security stages are registered yet; the pipeline runs inbound → provider → outbound with empty stage lists.
+- Only the Anthropic adapter exists. `LLM_PROVIDER=openai` fails at boot with "OpenAI adapter not implemented".
+- Stage and provider outcomes are recorded in the request context only; nothing is persisted until the audit spec lands.
+- The Anthropic SDK merges `ANTHROPIC_CUSTOM_HEADERS` from the process environment into every request; that variable cannot be pinned from the client constructor, so do not set it in production environments.

@@ -22,6 +22,6 @@ export const envSchema = z
 
 export type Env = z.output<typeof envSchema>;
 
-export function validateEnv(raw: Record<string, unknown>): Env {
+export const validateEnv = (raw: Record<string, unknown>): Env => {
   return parseEnv(envSchema, raw);
-}
+};

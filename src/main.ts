@@ -1,18 +1,23 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
 import { appConfig, type AppConfig } from './config/index.js';
 
-async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+const bootstrap = async (): Promise<void> => {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+    bodyParser: false,
+  });
   const { port, logLevels, env } = app.get<AppConfig>(appConfig.KEY);
 
   app.useLogger(logLevels);
   app.flushLogs();
+  app.disable('x-powered-by');
   app.enableShutdownHooks();
 
   await app.listen(port);
   new Logger('Bootstrap').log(`SecureLLM Gateway listening on port ${port} (${env})`);
-}
+};
 
 await bootstrap();

@@ -116,3 +116,13 @@ create running package.json scripts for running local env and regular env
 pre create the files (like redis config, mongo config etc.)  
 
 ---
+
+/superpowers:brainstorming I want to add the base LLM support.
+
+i want it to be abstract and easily  swappable so we can create a common interface to it and an implementation (adapter).
+
+the llm will pass various security layers (such as prompt injection detection, output validation, PII redaction and more) so we need to properly architect it to have a guard layer, input pipeline, exec layer all with auditing and such.
+
+we will implement each protocol later but for now i want us to create the basic provider abstract support and easly addable layers afterward
+
+--- 

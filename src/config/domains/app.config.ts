@@ -26,7 +26,7 @@ export interface AppConfig {
   isProduction: boolean;
 }
 
-export function toAppConfig(env: AppEnv): AppConfig {
+export const toAppConfig = (env: AppEnv): AppConfig => {
   return {
     env: env.NODE_ENV,
     port: env.PORT,
@@ -34,10 +34,10 @@ export function toAppConfig(env: AppEnv): AppConfig {
     logLevels: LOG_LEVELS.slice(0, LOG_LEVELS.indexOf(env.LOG_LEVEL) + 1),
     isProduction: env.NODE_ENV === 'production',
   };
-}
+};
 
-export function appConfigFromEnv(raw: Record<string, unknown>): AppConfig {
+export const appConfigFromEnv = (raw: Record<string, unknown>): AppConfig => {
   return toAppConfig(parseEnv(appEnvSchema, raw));
-}
+};
 
 export const appConfig = registerAs('app', () => appConfigFromEnv(process.env));

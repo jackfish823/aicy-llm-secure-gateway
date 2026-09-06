@@ -38,12 +38,68 @@ export default defineConfig(
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       // Everything goes through Nest's Logger so redaction stays in one place.
       'no-console': 'error',
+      // Module-level helpers are arrow functions assigned to const.
+      'func-style': ['error', 'expression'],
     },
   },
   {
     files: ['**/*.spec.ts', 'test/**/*.ts'],
     rules: {
       '@typescript-eslint/unbound-method': 'off',
+    },
+  },
+  {
+    files: ['src/common/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/providers/**', '**/pipeline/**', '**/chat/**'],
+              allowTypeImports: true,
+              message:
+                'src/common may only type-import from feature layers; a value import inverts the layering.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/providers/**/*.ts', 'src/pipeline/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/chat/**'],
+              allowTypeImports: true,
+              message:
+                'providers/pipeline may only type-import from chat; a value import inverts the layering.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/providers/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/chat/**', '**/pipeline/**'],
+              allowTypeImports: true,
+              message:
+                'providers may only type-import from chat and pipeline; a value import inverts the layering.',
+            },
+          ],
+        },
+      ],
     },
   },
   {
