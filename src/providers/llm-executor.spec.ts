@@ -18,11 +18,11 @@ const config: LlmConfig = {
 
 const request: ChatRequest = { messages: [{ role: 'user', content: 'hello' }] };
 
-function build(provider: LlmProvider, overrides: Partial<LlmConfig> = {}) {
+const build = (provider: LlmProvider, overrides: Partial<LlmConfig> = {}) => {
   const contextService = new RequestContextService();
   const executor = new LlmExecutor(provider, { ...config, ...overrides }, contextService);
   return { executor, contextService };
-}
+};
 
 describe('LlmExecutor', () => {
   it('builds the provider request from config defaults', async () => {

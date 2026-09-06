@@ -15,12 +15,12 @@ export interface MongoConfig {
   uri: string;
 }
 
-export function toMongoConfig(env: MongoEnv): MongoConfig {
+export const toMongoConfig = (env: MongoEnv): MongoConfig => {
   return { uri: env.MONGO_URI };
-}
+};
 
-export function mongoConfigFromEnv(raw: Record<string, unknown>): MongoConfig {
+export const mongoConfigFromEnv = (raw: Record<string, unknown>): MongoConfig => {
   return toMongoConfig(parseEnv(mongoEnvSchema, raw));
-}
+};
 
 export const mongoConfig = registerAs('mongo', () => mongoConfigFromEnv(process.env));

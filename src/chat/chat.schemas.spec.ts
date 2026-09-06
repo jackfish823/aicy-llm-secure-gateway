@@ -9,10 +9,10 @@ import {
 
 const minimal = { messages: [{ role: 'user', content: 'hi' }] };
 
-function issuesOf(input: unknown): string {
+const issuesOf = (input: unknown): string => {
   const result = chatRequestSchema.safeParse(input);
   return result.success ? '' : JSON.stringify(result.error.issues);
-}
+};
 
 describe('chatRequestSchema', () => {
   it('accepts a minimal request', () => {

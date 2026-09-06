@@ -11,16 +11,16 @@ export class EnvValidationError extends Error {
   }
 }
 
-function formatIssue(issue: z.core.$ZodIssue): string {
+const formatIssue = (issue: z.core.$ZodIssue): string => {
   const path = issue.path.map(String).join('.');
 
   return `${path === '' ? '(root)' : path}: ${issue.message}`;
-}
+};
 
-export function parseEnv<T extends z.ZodType>(
+export const parseEnv = <T extends z.ZodType>(
   schema: T,
   raw: Record<string, unknown>,
-): z.output<T> {
+): z.output<T> => {
   const result = schema.safeParse(raw);
 
   if (!result.success) {
@@ -28,4 +28,4 @@ export function parseEnv<T extends z.ZodType>(
   }
 
   return result.data;
-}
+};

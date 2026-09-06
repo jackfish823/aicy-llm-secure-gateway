@@ -30,7 +30,7 @@ interface LlmKeyEnv {
   OPENAI_API_KEY?: string | undefined;
 }
 
-function providerKeyVar(provider: LlmProviderId): ProviderKeyVar | undefined {
+const providerKeyVar = (provider: LlmProviderId): ProviderKeyVar | undefined => {
   switch (provider) {
     case 'anthropic':
       return 'ANTHROPIC_API_KEY';
@@ -39,9 +39,9 @@ function providerKeyVar(provider: LlmProviderId): ProviderKeyVar | undefined {
     default:
       return undefined;
   }
-}
+};
 
-function selectedApiKey(env: LlmKeyEnv): string | undefined {
+const selectedApiKey = (env: LlmKeyEnv): string | undefined => {
   switch (env.LLM_PROVIDER) {
     case 'anthropic':
       return env.ANTHROPIC_API_KEY;
@@ -50,9 +50,9 @@ function selectedApiKey(env: LlmKeyEnv): string | undefined {
     default:
       return undefined;
   }
-}
+};
 
-export function requireSelectedProviderKey(env: LlmKeyEnv, ctx: z.RefinementCtx): void {
+export const requireSelectedProviderKey = (env: LlmKeyEnv, ctx: z.RefinementCtx): void => {
   const keyVar = providerKeyVar(env.LLM_PROVIDER);
   if (keyVar !== undefined && selectedApiKey(env) === undefined) {
     ctx.addIssue({
@@ -61,7 +61,7 @@ export function requireSelectedProviderKey(env: LlmKeyEnv, ctx: z.RefinementCtx)
       message: `required when LLM_PROVIDER=${env.LLM_PROVIDER}`,
     });
   }
-}
+};
 
 export const llmEnvSchema = z.object(llmEnvShape).superRefine(requireSelectedProviderKey);
 export type LlmEnv = z.output<typeof llmEnvSchema>;
@@ -75,7 +75,7 @@ export interface LlmConfig {
   maxOutputTokens: number;
 }
 
-export function toLlmConfig(env: LlmEnv): LlmConfig {
+export const toLlmConfig = (env: LlmEnv): LlmConfig => {
   const apiKey = selectedApiKey(env);
   if (apiKey === undefined) {
     // Unreachable once llmEnvSchema's refinement has run; kept explicit instead of asserting.
@@ -91,10 +91,10 @@ export function toLlmConfig(env: LlmEnv): LlmConfig {
     baseUrl: env.LLM_BASE_URL,
     maxOutputTokens: env.LLM_MAX_OUTPUT_TOKENS,
   };
-}
+};
 
-export function llmConfigFromEnv(raw: Record<string, unknown>): LlmConfig {
+export const llmConfigFromEnv = (raw: Record<string, unknown>): LlmConfig => {
   return toLlmConfig(parseEnv(llmEnvSchema, raw));
-}
+};
 
 export const llmConfig = registerAs('llm', () => llmConfigFromEnv(process.env));

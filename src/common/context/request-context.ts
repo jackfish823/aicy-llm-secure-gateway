@@ -55,10 +55,10 @@ export interface RequestContext {
   exec?: ExecOutcome;
 }
 
-export function createRequestContext(): RequestContext {
+export const createRequestContext = (): RequestContext => {
   return { requestId: randomUUID(), startedAt: performance.now(), stages: [] };
-}
+};
 
-export function elapsedMs(since: number): number {
+export const elapsedMs = (since: number): number => {
   return Math.round((performance.now() - since) * 100) / 100;
-}
+};

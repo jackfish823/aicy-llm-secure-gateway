@@ -5,7 +5,7 @@ export type RawEnv = Record<string, string | undefined>;
 /** Matches the UUIDs the gateway generates for request ids. */
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-export function validEnv(overrides: RawEnv = {}): RawEnv {
+export const validEnv = (overrides: RawEnv = {}): RawEnv => {
   return {
     NODE_ENV: 'test',
     PORT: '3000',
@@ -23,15 +23,15 @@ export function validEnv(overrides: RawEnv = {}): RawEnv {
     RATE_LIMIT_MAX: '60',
     ...overrides,
   };
-}
+};
 
-export function stubEnv(env: RawEnv): void {
+export const stubEnv = (env: RawEnv): void => {
   for (const [name, value] of Object.entries(env)) {
     vi.stubEnv(name, value);
   }
-}
+};
 
-export function captureError(fn: () => unknown): Error {
+export const captureError = (fn: () => unknown): Error => {
   try {
     fn();
   } catch (error: unknown) {
@@ -41,4 +41,4 @@ export function captureError(fn: () => unknown): Error {
     throw new Error('threw a non-Error value', { cause: error });
   }
   throw new Error('expected the call to throw');
-}
+};

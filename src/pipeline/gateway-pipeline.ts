@@ -25,9 +25,9 @@ export type PipelineResult =
 
 const REASON_PATTERN = /^[A-Za-z0-9_.:-]{1,64}$/;
 
-function safeCode(value: string, fallback: string): string {
+const sanitizeCode = (value: string, fallback: string): string => {
   return REASON_PATTERN.test(value) ? value : fallback;
-}
+};
 
 /** Structural view shared by both phases; kept private so the generic stays off the public stage contracts. */
 interface Stage<T> {
@@ -62,7 +62,7 @@ export class GatewayPipeline {
         return {
           kind: 'blocked',
           phase: 'inbound',
-          stage: safeCode(stage.name, 'invalid_stage'),
+          stage: sanitizeCode(stage.name, 'invalid_stage'),
           reason: verdict.reason,
         };
       }
@@ -83,7 +83,7 @@ export class GatewayPipeline {
         return {
           kind: 'blocked',
           phase: 'outbound',
-          stage: safeCode(stage.name, 'invalid_stage'),
+          stage: sanitizeCode(stage.name, 'invalid_stage'),
           reason: verdict.reason,
         };
       }
@@ -103,13 +103,13 @@ export class GatewayPipeline {
   ): Promise<StageVerdict<T>> {
     const startedAt = performance.now();
 
-    const name = safeCode(stage.name, 'invalid_stage');
+    const name = sanitizeCode(stage.name, 'invalid_stage');
 
     try {
       const verdict = await stage.run(input, context);
 
       if (verdict.kind === 'block') {
-        const reason = safeCode(verdict.reason, 'invalid_reason');
+        const reason = sanitizeCode(verdict.reason, 'invalid_reason');
 
         context.stages.push({
           stage: name,

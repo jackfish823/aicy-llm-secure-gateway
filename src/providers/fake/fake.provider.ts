@@ -9,14 +9,14 @@ import {
 } from '../llm-provider.js';
 
 /** Asymmetric usage so a transposed field shows up in any test built on this helper. */
-export function fakeResponse(request: LlmRequest, content = 'fake response'): LlmResponse {
+export const fakeResponse = (request: LlmRequest, content = 'fake response'): LlmResponse => {
   return {
     content,
     model: request.model,
     stopReason: 'end_turn',
     usage: { inputTokens: 3, outputTokens: 5 },
   };
-}
+};
 
 /**
  * Scripted provider for tests. Replies from a queue (responses or errors), records a snapshot
@@ -59,7 +59,7 @@ export class FakeLlmProvider implements LlmProvider {
   }
 }
 
-function waitFor(ms: number, signal: AbortSignal): Promise<void> {
+const waitFor = (ms: number, signal: AbortSignal): Promise<void> => {
   if (signal.aborted) {
     return Promise.reject(new LlmProviderError('timeout', 'fake provider aborted before replying'));
   }
@@ -71,10 +71,10 @@ function waitFor(ms: number, signal: AbortSignal): Promise<void> {
       signal.removeEventListener('abort', onAbort);
       resolve();
     }, ms);
-    function onAbort(): void {
+    const onAbort = (): void => {
       clearTimeout(timer);
       reject(new LlmProviderError('timeout', 'fake provider aborted while replying'));
-    }
+    };
     signal.addEventListener('abort', onAbort, { once: true });
   });
-}
+};

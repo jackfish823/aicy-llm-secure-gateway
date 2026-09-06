@@ -38,6 +38,8 @@ export default defineConfig(
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       // Everything goes through Nest's Logger so redaction stays in one place.
       'no-console': 'error',
+      // Module-level helpers are arrow functions assigned to const.
+      'func-style': ['error', 'expression'],
     },
   },
   {

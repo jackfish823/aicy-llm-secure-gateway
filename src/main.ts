@@ -4,7 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
 import { appConfig, type AppConfig } from './config/index.js';
 
-async function bootstrap(): Promise<void> {
+const bootstrap = async (): Promise<void> => {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
     bodyParser: false,
@@ -18,6 +18,6 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(port);
   new Logger('Bootstrap').log(`SecureLLM Gateway listening on port ${port} (${env})`);
-}
+};
 
 await bootstrap();

@@ -13,12 +13,12 @@ export interface AuthConfig {
   apiKeyPepper: string;
 }
 
-export function toAuthConfig(env: AuthEnv): AuthConfig {
+export const toAuthConfig = (env: AuthEnv): AuthConfig => {
   return { apiKeyPepper: env.AUTH_API_KEY_PEPPER };
-}
+};
 
-export function authConfigFromEnv(raw: Record<string, unknown>): AuthConfig {
+export const authConfigFromEnv = (raw: Record<string, unknown>): AuthConfig => {
   return toAuthConfig(parseEnv(authEnvSchema, raw));
-}
+};
 
 export const authConfig = registerAs('auth', () => authConfigFromEnv(process.env));

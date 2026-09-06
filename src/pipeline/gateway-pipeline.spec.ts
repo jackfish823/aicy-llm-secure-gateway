@@ -41,11 +41,11 @@ const finding: Finding = {
   confidence: 1,
 };
 
-function inbound(
+const inbound = (
   name: string,
   verdict: (input: InboundInput) => StageVerdict<InboundInput>,
   log: string[],
-): InboundStage {
+): InboundStage => {
   return {
     name,
     run: (input) => {
@@ -53,13 +53,13 @@ function inbound(
       return Promise.resolve(verdict(input));
     },
   };
-}
+};
 
-function outbound(
+const outbound = (
   name: string,
   verdict: (input: OutboundInput) => StageVerdict<OutboundInput>,
   log: string[],
-): OutboundStage {
+): OutboundStage => {
   return {
     name,
     run: (input) => {
@@ -67,9 +67,9 @@ function outbound(
       return Promise.resolve(verdict(input));
     },
   };
-}
+};
 
-function build(inboundStages: InboundStage[], outboundStages: OutboundStage[] = []) {
+const build = (inboundStages: InboundStage[], outboundStages: OutboundStage[] = []) => {
   const fake = new FakeLlmProvider();
   const contextService = new RequestContextService();
   const executor = new LlmExecutor(fake, config, contextService);
@@ -77,7 +77,7 @@ function build(inboundStages: InboundStage[], outboundStages: OutboundStage[] = 
   const context: RequestContext = createRequestContext();
   const run = () => contextService.run(context, () => pipeline.run(request));
   return { fake, pipeline, context, run };
-}
+};
 
 describe('GatewayPipeline', () => {
   it('runs inbound stages in order, chaining transforms into the provider call', async () => {

@@ -31,7 +31,7 @@ export const anthropicResponseSchema = z.object({
 });
 export type AnthropicResponse = z.output<typeof anthropicResponseSchema>;
 
-export function toAnthropicRequest(request: LlmRequest): AnthropicRequest {
+export const toAnthropicRequest = (request: LlmRequest): AnthropicRequest => {
   const params: AnthropicRequest = {
     model: request.model,
     max_tokens: request.maxTokens,
@@ -41,9 +41,9 @@ export function toAnthropicRequest(request: LlmRequest): AnthropicRequest {
     params.system = request.system;
   }
   return params;
-}
+};
 
-export function fromAnthropicResponse(response: AnthropicResponse): LlmResponse {
+export const fromAnthropicResponse = (response: AnthropicResponse): LlmResponse => {
   const content = response.content
     .flatMap((block) => (block.type === 'text' && block.text !== undefined ? [block.text] : []))
     .join('');
@@ -53,9 +53,9 @@ export function fromAnthropicResponse(response: AnthropicResponse): LlmResponse 
     stopReason: toStopReason(response.stop_reason),
     usage: { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens },
   };
-}
+};
 
-function toStopReason(reason: string | null): StopReason {
+const toStopReason = (reason: string | null): StopReason => {
   switch (reason) {
     case 'end_turn':
     case 'max_tokens':
@@ -64,10 +64,10 @@ function toStopReason(reason: string | null): StopReason {
     default:
       return 'other';
   }
-}
+};
 
 /** Gateway-authored messages only; the SDK error rides along as `cause` for debug logs. */
-export function toAnthropicError(error: unknown): LlmProviderError {
+export const toAnthropicError = (error: unknown): LlmProviderError => {
   if (error instanceof LlmProviderError) {
     return error;
   }
@@ -88,13 +88,13 @@ export function toAnthropicError(error: unknown): LlmProviderError {
     );
   }
   return new LlmProviderError('upstream', 'anthropic request failed', { cause: error });
-}
+};
 
-function toStatus(status: unknown): number | undefined {
+const toStatus = (status: unknown): number | undefined => {
   return typeof status === 'number' ? status : undefined;
-}
+};
 
-function kindForStatus(status: number | undefined): LlmProviderErrorKind {
+const kindForStatus = (status: number | undefined): LlmProviderErrorKind => {
   if (status === 401 || status === 403) {
     return 'auth';
   }
@@ -105,4 +105,4 @@ function kindForStatus(status: number | undefined): LlmProviderErrorKind {
     return 'bad_request';
   }
   return 'upstream';
-}
+};

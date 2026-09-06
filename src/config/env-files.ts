@@ -7,7 +7,7 @@ export interface EnvFileOptions {
   envFilePath: string[];
 }
 
-export function resolveEnvFiles(nodeEnv: NodeEnv): EnvFileOptions {
+export const resolveEnvFiles = (nodeEnv: NodeEnv): EnvFileOptions => {
   switch (nodeEnv) {
     case 'development':
       return { ignoreEnvFile: false, envFilePath: ['.env.local', '.env'] };
@@ -16,10 +16,10 @@ export function resolveEnvFiles(nodeEnv: NodeEnv): EnvFileOptions {
     case 'production':
       return { ignoreEnvFile: true, envFilePath: [] };
   }
-}
+};
 
 const nodeEnvSchema = z.object({ NODE_ENV: appEnvShape.NODE_ENV });
 
-export function readNodeEnv(raw: Record<string, unknown>): NodeEnv {
+export const readNodeEnv = (raw: Record<string, unknown>): NodeEnv => {
   return parseEnv(nodeEnvSchema, raw).NODE_ENV;
-}
+};

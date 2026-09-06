@@ -17,7 +17,7 @@ export interface AnthropicMessagesClient {
  * - `baseURL` always explicit: `undefined` would fall through to ANTHROPIC_BASE_URL.
  * - `maxRetries: 0`: the executor's deadline is the single timing authority.
  */
-export function createAnthropicClient(config: LlmConfig): AnthropicMessagesClient {
+export const createAnthropicClient = (config: LlmConfig): AnthropicMessagesClient => {
   return new Anthropic({
     apiKey: config.apiKey,
     baseURL: config.baseUrl ?? 'https://api.anthropic.com',
@@ -25,4 +25,4 @@ export function createAnthropicClient(config: LlmConfig): AnthropicMessagesClien
     maxRetries: 0,
     logLevel: 'off',
   });
-}
+};

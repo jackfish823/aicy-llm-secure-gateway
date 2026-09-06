@@ -16,11 +16,11 @@ const rawMessage = {
   usage: { input_tokens: 4, output_tokens: 2 },
 };
 
-function stubClient() {
+const stubClient = () => {
   const create = vi.fn<AnthropicMessagesClient['messages']['create']>();
   const client: AnthropicMessagesClient = { messages: { create } };
   return { create, client };
-}
+};
 
 describe('AnthropicProvider', () => {
   it('sends the converted request with the abort signal and converts the reply', async () => {

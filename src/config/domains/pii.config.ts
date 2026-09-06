@@ -17,12 +17,12 @@ export interface PiiConfig {
   tokenKey: Buffer;
 }
 
-export function toPiiConfig(env: PiiEnv): PiiConfig {
+export const toPiiConfig = (env: PiiEnv): PiiConfig => {
   return { tokenKey: Buffer.from(env.PII_TOKEN_KEY, 'hex') };
-}
+};
 
-export function piiConfigFromEnv(raw: Record<string, unknown>): PiiConfig {
+export const piiConfigFromEnv = (raw: Record<string, unknown>): PiiConfig => {
   return toPiiConfig(parseEnv(piiEnvSchema, raw));
-}
+};
 
 export const piiConfig = registerAs('pii', () => piiConfigFromEnv(process.env));

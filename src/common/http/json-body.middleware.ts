@@ -39,13 +39,13 @@ export class JsonBodyMiddleware implements NestMiddleware {
 }
 
 /** Body-parser failures → gateway-shaped HttpExceptions; the parser's message is never used. */
-export function toBodyException(error: unknown, requestId: string): HttpException {
+export const toBodyException = (error: unknown, requestId: string): HttpException => {
   return statusOf(error) === 413
     ? new PayloadTooLargeException({ statusCode: 413, error: 'body_too_large', requestId })
     : new BadRequestException({ statusCode: 400, error: 'invalid_body', requestId });
-}
+};
 
-function statusOf(error: unknown): number | undefined {
+const statusOf = (error: unknown): number | undefined => {
   if (
     typeof error === 'object' &&
     error !== null &&
@@ -55,4 +55,4 @@ function statusOf(error: unknown): number | undefined {
     return error.status;
   }
   return undefined;
-}
+};

@@ -98,7 +98,7 @@ const request: LlmRequest = {
 };
 const options = { signal: new AbortController().signal };
 
-async function failureOf(adapter: TestAdapter): Promise<LlmProviderError> {
+const failureOf = async (adapter: TestAdapter): Promise<LlmProviderError> => {
   try {
     await adapter.complete(request, options);
   } catch (error: unknown) {
@@ -108,7 +108,7 @@ async function failureOf(adapter: TestAdapter): Promise<LlmProviderError> {
     throw new Error('expected an LlmProviderError', { cause: error });
   }
   throw new Error('expected complete() to reject');
-}
+};
 
 describe('LlmProviderAdapter', () => {
   it('runs convert → send → parse → convert → validate in order and returns the validated response', async () => {

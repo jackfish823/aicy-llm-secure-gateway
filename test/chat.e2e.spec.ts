@@ -25,7 +25,7 @@ interface BootOptions {
   pipeline?: Pick<GatewayPipeline, 'run'>;
 }
 
-async function bootApp(fake: FakeLlmProvider, options: BootOptions = {}): Promise<RunningApp> {
+const bootApp = async (fake: FakeLlmProvider, options: BootOptions = {}): Promise<RunningApp> => {
   const { AppModule } = await import('../src/app.module.js');
   let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(LLM_PROVIDER)
@@ -42,23 +42,23 @@ async function bootApp(fake: FakeLlmProvider, options: BootOptions = {}): Promis
   app.disable('x-powered-by');
   await app.listen(0);
   return { app, baseUrl: await app.getUrl() };
-}
+};
 
-function postChat(baseUrl: string, body: unknown): Promise<Response> {
+const postChat = (baseUrl: string, body: unknown): Promise<Response> => {
   return fetch(`${baseUrl}/v1/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   });
-}
+};
 
-function postRaw(
+const postRaw = (
   baseUrl: string,
   body: string,
   headers: Record<string, string> = {},
-): Promise<Response> {
+): Promise<Response> => {
   return fetch(`${baseUrl}/v1/chat`, { method: 'POST', headers, body });
-}
+};
 
 const validBody = { messages: [{ role: 'user', content: 'hello there' }] };
 const errorBody = z.object({ statusCode: z.number(), error: z.string(), requestId: z.string() });
