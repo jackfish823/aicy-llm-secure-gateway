@@ -56,7 +56,7 @@ export default defineConfig(
         {
           patterns: [
             {
-              group: ['**/providers/**', '**/pipeline/**', '**/chat/**'],
+              group: ['**/providers/**', '**/pipeline/**', '**/chat/**', '**/security/**'],
               allowTypeImports: true,
               message:
                 'src/common may only type-import from feature layers; a value import inverts the layering.',
@@ -96,6 +96,24 @@ export default defineConfig(
               allowTypeImports: true,
               message:
                 'providers may only type-import from chat and pipeline; a value import inverts the layering.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/security/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/chat/**', '**/pipeline/**', '**/providers/**'],
+              allowTypeImports: true,
+              message:
+                'security may only import from common and config; a value import from a feature layer inverts the layering.',
             },
           ],
         },

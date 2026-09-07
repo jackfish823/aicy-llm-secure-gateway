@@ -5,16 +5,29 @@ import {
   StandardSchemaValidationPipe,
 } from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ChatModule } from './chat/chat.module.js';
 import { JsonBodyMiddleware } from './common/http/json-body.middleware.js';
 import { AppLoggerService } from './common/logger/app-logger.service.js';
 import { RequestContextMiddleware } from './common/context/request-context.middleware.js';
 import { RequestContextModule } from './common/context/request-context.module.js';
 import { AppConfigModule } from './config/config.module.js';
+import { mongoConfig, type MongoConfig } from './config/domains/mongo.config.js';
 import { HealthModule } from './health/health.module.js';
+import { AuthModule } from './security/auth/auth.module.js';
 
 @Module({
-  imports: [AppConfigModule.forRoot(), RequestContextModule, HealthModule, ChatModule],
+  imports: [
+    AppConfigModule.forRoot(),
+    MongooseModule.forRootAsync({
+      inject: [mongoConfig.KEY],
+      useFactory: (config: MongoConfig) => ({ uri: config.uri }),
+    }),
+    RequestContextModule,
+    AuthModule,
+    HealthModule,
+    ChatModule,
+  ],
   providers: [AppLoggerService, { provide: APP_PIPE, useClass: StandardSchemaValidationPipe }],
 })
 export class AppModule implements NestModule {

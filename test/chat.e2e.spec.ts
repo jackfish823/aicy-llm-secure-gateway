@@ -13,10 +13,13 @@ import {
 } from '../src/pipeline/stage.js';
 import { FakeLlmProvider } from '../src/providers/fake/fake.provider.js';
 import { LLM_PROVIDER, LlmProviderError } from '../src/providers/llm-provider.js';
+import { withoutMongo } from '../src/security/auth/api-key.fixture.js';
+import { ApiKeyService } from '../src/security/auth/api-key.service.js';
 
 interface RunningApp {
   app: NestExpressApplication;
   baseUrl: string;
+  clientKey: string;
 }
 
 interface BootOptions {
@@ -27,7 +30,7 @@ interface BootOptions {
 
 const bootApp = async (fake: FakeLlmProvider, options: BootOptions = {}): Promise<RunningApp> => {
   const { AppModule } = await import('../src/app.module.js');
-  let builder = Test.createTestingModule({ imports: [AppModule] })
+  let builder = withoutMongo(Test.createTestingModule({ imports: [AppModule] }))
     .overrideProvider(LLM_PROVIDER)
     .useValue(fake)
     .overrideProvider(INBOUND_STAGES)
@@ -38,26 +41,35 @@ const bootApp = async (fake: FakeLlmProvider, options: BootOptions = {}): Promis
     builder = builder.overrideProvider(GatewayPipeline).useValue(options.pipeline);
   }
   const moduleRef = await builder.compile();
+  const { key: clientKey } = await moduleRef.get(ApiKeyService).create('e2e', 'client');
   const app = moduleRef.createNestApplication<NestExpressApplication>({ bodyParser: false });
   app.disable('x-powered-by');
   await app.listen(0);
-  return { app, baseUrl: await app.getUrl() };
+  return { app, baseUrl: await app.getUrl(), clientKey };
 };
 
-const postChat = (baseUrl: string, body: unknown): Promise<Response> => {
-  return fetch(`${baseUrl}/v1/chat`, {
+const postChat = (
+  running: RunningApp,
+  body: unknown,
+  key = running.clientKey,
+): Promise<Response> => {
+  return fetch(`${running.baseUrl}/v1/chat`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', 'x-api-key': key },
     body: JSON.stringify(body),
   });
 };
 
 const postRaw = (
-  baseUrl: string,
+  running: RunningApp,
   body: string,
   headers: Record<string, string> = {},
 ): Promise<Response> => {
-  return fetch(`${baseUrl}/v1/chat`, { method: 'POST', headers, body });
+  return fetch(`${running.baseUrl}/v1/chat`, {
+    method: 'POST',
+    headers: { 'x-api-key': running.clientKey, ...headers },
+    body,
+  });
 };
 
 const validBody = { messages: [{ role: 'user', content: 'hello there' }] };
@@ -82,7 +94,7 @@ describe('POST /v1/chat (e2e)', () => {
   });
 
   it('returns the provider reply with the request id in body and header', async () => {
-    const response = await postChat(running.baseUrl, validBody);
+    const response = await postChat(running, validBody);
     const body = chatResponseSchema.parse(await response.json());
 
     expect(response.status).toBe(200);
@@ -92,8 +104,27 @@ describe('POST /v1/chat (e2e)', () => {
     expect(fake.calls[0]).toMatchObject({ model: 'claude-opus-5', maxTokens: 1024 });
   });
 
+  it('rejects a request without an API key with 401 before touching the provider', async () => {
+    const response = await postChat(running, validBody, '');
+    const body = errorBody.parse(await response.json());
+
+    expect(response.status).toBe(401);
+    expect(body).toMatchObject({ statusCode: 401, error: 'unauthorized' });
+    expect(response.headers.get('x-request-id')).toBe(body.requestId);
+    expect(fake.calls).toHaveLength(0);
+  });
+
+  it('rejects an unknown API key with 401 and never echoes it', async () => {
+    const response = await postChat(running, validBody, 'sk_NOT-A-REAL-KEY');
+    const text = await response.text();
+
+    expect(response.status).toBe(401);
+    expect(text).not.toContain('NOT-A-REAL-KEY');
+    expect(fake.calls).toHaveLength(0);
+  });
+
   it('rejects an invalid body with 400 and never echoes it', async () => {
-    const response = await postChat(running.baseUrl, {
+    const response = await postChat(running, {
       messages: [{ role: 'user', content: '' }],
       'SMUGGLED-KEY': 1,
     });
@@ -109,7 +140,7 @@ describe('POST /v1/chat (e2e)', () => {
   it('maps upstream failures to 502 upstream_error', async () => {
     fake.enqueue(new LlmProviderError('rate_limited', 'slow down', { status: 429 }));
 
-    const response = await postChat(running.baseUrl, validBody);
+    const response = await postChat(running, validBody);
     const body = errorBody.extend({ kind: z.string() }).parse(await response.json());
 
     expect(response.status).toBe(502);
@@ -120,7 +151,7 @@ describe('POST /v1/chat (e2e)', () => {
   it('maps timeouts to 504', async () => {
     fake.enqueue(new LlmProviderError('timeout', 'too slow'));
 
-    const response = await postChat(running.baseUrl, validBody);
+    const response = await postChat(running, validBody);
     const body: unknown = await response.json();
 
     expect(response.status).toBe(504);
@@ -129,7 +160,7 @@ describe('POST /v1/chat (e2e)', () => {
 
   it('rejects malformed JSON with a content-free invalid_body 400 carrying the request id', async () => {
     const response = await postRaw(
-      running.baseUrl,
+      running,
       '{"messages": [{"role": "user", "content": "SMUGGLED-FRAGMENT',
       {
         'content-type': 'application/json',
@@ -150,7 +181,7 @@ describe('POST /v1/chat (e2e)', () => {
       messages: [{ role: 'user', content: 'x'.repeat(11 * 1024 * 1024) }],
     });
 
-    const response = await postRaw(running.baseUrl, oversized, {
+    const response = await postRaw(running, oversized, {
       'content-type': 'application/json',
     });
     const body = errorBody.parse(await response.json());
@@ -162,14 +193,14 @@ describe('POST /v1/chat (e2e)', () => {
   });
 
   it('treats a body without a JSON content type as an invalid request', async () => {
-    const response = await postRaw(running.baseUrl, JSON.stringify(validBody));
+    const response = await postRaw(running, JSON.stringify(validBody));
 
     expect(response.status).toBe(400);
     expect(fake.calls).toHaveLength(0);
   });
 
   it('does not advertise the server framework', async () => {
-    const response = await postChat(running.baseUrl, validBody);
+    const response = await postChat(running, validBody);
 
     expect(response.status).toBe(200);
     expect(response.headers.get('x-powered-by')).toBeNull();
@@ -198,10 +229,10 @@ describe('POST /v1/chat with registered stages (e2e)', () => {
           ],
         }),
     };
-    const { app, baseUrl } = await bootApp(fake, { inboundStages: [blocking] });
+    const staged = await bootApp(fake, { inboundStages: [blocking] });
 
     try {
-      const response = await postChat(baseUrl, validBody);
+      const response = await postChat(staged, validBody);
       const text = await response.text();
       const body: unknown = JSON.parse(text);
 
@@ -214,7 +245,7 @@ describe('POST /v1/chat with registered stages (e2e)', () => {
       expect(text).not.toContain('matchedSegment');
       expect(fake.calls).toHaveLength(0);
     } finally {
-      await app.close();
+      await staged.app.close();
     }
   });
 
@@ -224,17 +255,17 @@ describe('POST /v1/chat with registered stages (e2e)', () => {
       name: 'test-broken',
       run: () => Promise.reject(new Error('detector crashed')),
     };
-    const { app, baseUrl } = await bootApp(fake, { inboundStages: [broken] });
+    const staged = await bootApp(fake, { inboundStages: [broken] });
 
     try {
-      const response = await postChat(baseUrl, validBody);
+      const response = await postChat(staged, validBody);
       const body: unknown = await response.json();
 
       expect(response.status).toBe(500);
       expect(body).toMatchObject({ error: 'pipeline_failure', stage: 'test-broken' });
       expect(fake.calls).toHaveLength(0);
     } finally {
-      await app.close();
+      await staged.app.close();
     }
   });
 
@@ -251,10 +282,10 @@ describe('POST /v1/chat with registered stages (e2e)', () => {
           ],
         }),
     };
-    const { app, baseUrl } = await bootApp(fake, { outboundStages: [blocking] });
+    const staged = await bootApp(fake, { outboundStages: [blocking] });
 
     try {
-      const response = await postChat(baseUrl, validBody);
+      const response = await postChat(staged, validBody);
       const text = await response.text();
       const body: unknown = JSON.parse(text);
 
@@ -268,18 +299,18 @@ describe('POST /v1/chat with registered stages (e2e)', () => {
       expect(text).not.toContain('AKIA-FAKE');
       expect(fake.calls).toHaveLength(1);
     } finally {
-      await app.close();
+      await staged.app.close();
     }
   });
 
   it('turns an unexpected error into a content-free internal_error 500', async () => {
     const fake = new FakeLlmProvider();
-    const { app, baseUrl } = await bootApp(fake, {
+    const staged = await bootApp(fake, {
       pipeline: { run: () => Promise.reject(new Error('boom SECRET-DETAIL')) },
     });
 
     try {
-      const response = await postChat(baseUrl, validBody);
+      const response = await postChat(staged, validBody);
       const text = await response.text();
       const body = errorBody.parse(JSON.parse(text));
 
@@ -288,7 +319,7 @@ describe('POST /v1/chat with registered stages (e2e)', () => {
       expect(response.headers.get('x-request-id')).toBe(body.requestId);
       expect(text).not.toContain('SECRET-DETAIL');
     } finally {
-      await app.close();
+      await staged.app.close();
     }
   });
 });

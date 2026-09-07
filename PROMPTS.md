@@ -131,4 +131,11 @@ now i want to add a generic logger using pino with proper structured logging lik
 
 attached a doc from one of properly made project of mine for ref, ignore the grafana and senty
 
---- 
+---
+ok now we want an api key authentication.
+
+two roles: admin and client (the admin will have access to another route as well)
+create a admin decorator to put over the admin routes
+the auth pipe should be at realatively at the start
+
+---

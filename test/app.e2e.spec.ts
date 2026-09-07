@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { stubEnv, UUID_PATTERN, validEnv } from '../src/config/env.fixture.js';
+import { withoutMongo } from '../src/security/auth/api-key.fixture.js';
 
 describe('application (e2e)', () => {
   let app: INestApplication;
@@ -11,7 +12,9 @@ describe('application (e2e)', () => {
     // AppModule validates the environment while it is being imported, so stub first.
     stubEnv(validEnv());
     const { AppModule } = await import('../src/app.module.js');
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await withoutMongo(
+      Test.createTestingModule({ imports: [AppModule] }),
+    ).compile();
     app = moduleRef.createNestApplication({ bodyParser: false });
     await app.listen(0);
     baseUrl = await app.getUrl();
@@ -28,6 +31,12 @@ describe('application (e2e)', () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ status: 'ok' });
+  });
+
+  it('GET /healthz is public', async () => {
+    const response = await fetch(`${baseUrl}/healthz`);
+
+    expect(response.status).toBe(200);
   });
 
   it('every response carries a generated x-request-id', async () => {

@@ -15,18 +15,26 @@ audit trail.
 ```bash
 pnpm install
 cp .env.example .env.local   # then replace the placeholder values
-docker compose up -d         # mongo + redis
+docker compose up -d         # mongo + redis; the gateway connects to Mongo at boot
+pnpm keys:create --name dev --role client   # prints the key once
 pnpm start:local
 curl http://localhost:3000/healthz
 ```
 
 ## API
 
-`POST /v1/chat` — one completion through the security pipeline. No auth yet (see Known limitations).
+`POST /v1/chat` — one completion through the security pipeline.
+
+Every route except `GET /healthz` requires an `x-api-key` header. Keys have a role: `client`
+may call `POST /v1/chat`; `admin` may also call routes marked `@Admin()` (none yet). Mint one
+with `pnpm keys:create --name <label> --role <admin|client>`; the key is printed once and only
+its HMAC-SHA256 (keyed with `AUTH_API_KEY_PEPPER`) is stored in the `api_keys` collection.
+Revoke a key by deleting its document.
 
 ```bash
 curl -s http://localhost:3000/v1/chat \
   -H 'content-type: application/json' \
+  -H 'x-api-key: sk_...' \
   -d '{"messages":[{"role":"user","content":"Say hello"}],"maxTokens":64}'
 ```
 
@@ -39,6 +47,8 @@ capped at 10 MB (`JSON_BODY_LIMIT`) and larger ones are rejected with 413.
 
 | Situation                | Status | Body `error`                                      |
 | ------------------------ | ------ | ------------------------------------------------- |
+| No or unknown `x-api-key`| 401    | `unauthorized`                                    |
+| Key lacks required role  | 403    | `forbidden`                                       |
 | Body is not valid JSON   | 400    | `invalid_body`                                    |
 | Body over 10 MB          | 413    | `body_too_large`                                  |
 | Body fails the schema    | 400    | Nest validation message list                      |
@@ -91,7 +101,7 @@ variable named and no values printed. Each domain owns a typed factory in
 | `LLM_BASE_URL`         | no                            |               | Optional proxy URL; empty means unset                         |
 | `ANTHROPIC_API_KEY`    | when `LLM_PROVIDER=anthropic` |               |                                                               |
 | `OPENAI_API_KEY`       | when `LLM_PROVIDER=openai`    |               |                                                               |
-| `AUTH_API_KEY_PEPPER`  | yes                           |               | At least 32 characters                                        |
+| `AUTH_API_KEY_PEPPER`  | yes                           |               | ≥32 chars; HMAC key for stored API key hashes. Changing it invalidates every key |
 | `PII_TOKEN_KEY`        | yes                           |               | 32 bytes as 64 hex characters (AES-256-GCM)                   |
 | `RATE_LIMIT_WINDOW_MS` | no                            | `60000`       | Positive integer                                              |
 | `RATE_LIMIT_MAX`       | no                            | `60`          | Requests per key per window                                   |
@@ -119,6 +129,15 @@ Providers implement `LlmProviderAdapter` (convert → send → parse → convert
 pure conversions in a codec file (`src/providers/anthropic/anthropic.codec.ts`);
 `FakeLlmProvider` is for tests only and is excluded from the production build.
 
+## Auth
+
+`src/security/auth/`. `ApiKeyGuard` is a global guard registered by `AuthModule`: routes are
+protected unless decorated `@Public()`, and `@Admin()` requires the `admin` role. On success the
+guard sets `RequestContext.principal` (`{ apiKeyId, roles }`) for later stages and audit.
+Rejections log `auth.rejected` with a `reason` (`missing` | `invalid` | `forbidden`) and never
+the key. Tests boot the app through `withoutMongo()` from `api-key.fixture.ts`; nothing in the
+suite connects to Mongo.
+
 ## Logging
 
 Pino, JSON to stdout (pretty in `start:local`). Use Nest's `Logger` as usual; pass a human
@@ -144,7 +163,8 @@ copied from one to the other.
   rotation, streaming responses, token-level cost accounting.
 - The gateway container is not part of `docker-compose.yml` yet; run it on the host.
 - `GET /healthz` is liveness only. It does not check Mongo or Redis.
-- `POST /v1/chat` has no authentication or rate limiting yet. Do not expose it beyond localhost.
+- `POST /v1/chat` has no rate limiting yet.
+- API keys have no expiry or rotation; revoke by deleting the document.
 - No security stages are registered yet; the pipeline runs inbound → provider → outbound with empty stage lists.
 - Only the Anthropic adapter exists. `LLM_PROVIDER=openai` fails at boot with "OpenAI adapter not implemented".
 - Stage and provider outcomes are recorded in the request context only; nothing is persisted until the audit spec lands.
